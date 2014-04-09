@@ -238,6 +238,12 @@ def trim(docstring):
     # Return a single string:
     return '\n'.join(trimmed)
 
+def separator(title = ''):
+    import struct, termios, fcntl, sys
+    _height, width = struct.unpack('hh', fcntl.ioctl(sys.stdin.fileno(), termios.TIOCGWINSZ, '1234'))
+    w = width - 2 - len(title)
+    return '[%s%s%s]' % ('-' * (w // 2), title, '-' * ((w + 1) // 2))
+
 def pager(text, pagesize=None):
     """
     Paging output, mimic external command less/more

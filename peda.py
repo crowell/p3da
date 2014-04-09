@@ -4190,7 +4190,7 @@ class PEDACmd(object):
 
         pc = peda.getreg("pc")
         # display register info
-        msg("[%s]" % "registers".center(78, "-"), "blue")
+        msg(separator('registers'), "blue")
         self.xinfo("register")
         return
 
@@ -4214,8 +4214,7 @@ class PEDACmd(object):
         else:
             inst = None
 
-        text = blue("[%s]" % "code".center(78, "-"))
-        msg(text)
+        msg(separator('code'), 'blue')
         if inst: # valid $PC
             text = ""
             opcode = inst.split(":")[1].split()[0]
@@ -4274,8 +4273,7 @@ class PEDACmd(object):
         if not self._is_running():
             return
 
-        text = blue("[%s]" % "stack".center(78, "-"))
-        msg(text)
+        msg(separator('stack'), 'blue')
         sp = peda.getreg("sp")
         if peda.is_address(sp):
             self.telescope(sp, count)
@@ -4318,7 +4316,7 @@ class PEDACmd(object):
         # display stack content, forced in case SIGSEGV
         if "stack" in opt or "SIGSEGV" in status:
             self.context_stack(count)
-        msg("[%s]" % ("-"*78), "blue")
+        msg(separator(), "blue")
         msg("Legend: %s, %s, %s, value" % (red("code"), blue("data"), green("rodata")))
 
         # display stopped reason
