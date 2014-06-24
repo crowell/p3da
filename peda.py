@@ -4668,8 +4668,25 @@ class PEDACmd(object):
                 result += [None]
         idx = 0
         text = ""
+
+
+        regs = peda.getregs()
+        regsList = {}
+        regsColumnLen = 1
+        #find any registers pointing to an address
         for chain in result:
-            text += "%04d| " % (idx)
+             regslist = ""
+             for reg in regs:
+                if regs[reg] == to_int(chain[0][0]):
+                   regslist += reg + " "
+             s = len(regslist)
+             if s > regsColumnLen:
+                regsColumnLen = s
+             if regslist != "":
+                regsList[chain[0][0]] = regslist
+
+        for chain in result:
+            text += "%04d| %s" % (idx, regsList[chain[0][0]] + " "*(regsColumnLen-len(regsList[chain[0][0]])) if chain[0][0] in regsList else " "*regsColumnLen)
             text += format_reference_chain(chain)
             text += "\n"
             idx += step
