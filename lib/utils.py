@@ -115,7 +115,7 @@ def colorize(text, color=None, attrib=None):
     CPRE = '\033['
     CSUF = '\033[0m'
 
-    if config.Option.get("ansicolor") != "on":
+    if not config.Option.get("ansicolor"):
         return text
 
     ccode = ""
@@ -207,7 +207,7 @@ def error_msg(text):
 
 def debug_msg(text, prefix="Debug"):
     """Colorize debug message with prefix"""
-    if config.Option.get("debug") == "on":
+    if config.Option.get("debug"):
         msg(colorize("%s: %s" % (prefix, str(text)), "cyan"))
 
 def trim(docstring):
@@ -276,7 +276,7 @@ def execute_external_command(command, cmd_input=None):
     result = ""
     P = Popen([command], stdout=PIPE, stdin=PIPE, stderr=PIPE, shell=True)
     (result, err) = P.communicate(cmd_input)
-    if err and config.Option.get("debug") == "on":
+    if err and config.Option.get("debug"):
         warning_msg(err)
 
     return decode(result, 'utf-8')
@@ -285,7 +285,11 @@ def is_printable(text, printables=""):
     """
     Check if a string is printable
     """
-    return (set(str(text)) - set(string.printable + printables) == set())
+    try:
+        text.decode('ascii')
+        return True
+    except:
+        return False
 
 def is_math_exp(str):
     """
@@ -372,6 +376,7 @@ def int2hexstr(num, intsize=4):
     """
     Convert a number to hexified string
     """
+
     if intsize == 8:
         if num < 0:
             result = struct.pack("<q", num)
@@ -449,9 +454,14 @@ def format_address(addr, type):
 def format_reference_chain(chain):
     """
     Colorize a chain of references
+
+    v = value
+    t = type
+    vn = value name (str)
     """
     v = t = vn = None
     text = ""
+
     if not chain:
         text += "Cannot access memory address"
     else:

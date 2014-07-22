@@ -75,7 +75,7 @@ class PEDA(object):
             gdb.execute(gdb_command)
             return True
         except Exception as e:
-            if config.Option.get("debug") == "on":
+            if config.Option.get("debug"):
                 msg('Exception (%s): %s' % (gdb_command, e), "red")
                 traceback.print_exc()
             return False
@@ -115,11 +115,11 @@ class PEDA(object):
             logfd.close()
         except Exception as e:
             gdb.execute('set logging off') #to be sure
-            if config.Option.get("debug") == "on":
+            if config.Option.get("debug"):
                 msg('Exception (%s): %s' % (gdb_command, e), "red")
                 traceback.print_exc()
             logfd.close()
-        if config.Option.get("verbose") == "on":
+        if config.Option.get("verbose"):
             msg(result)
         return decode(result,'UTF-8')
 
@@ -210,7 +210,7 @@ class PEDA(object):
                     args[idx] = "%s" % (to_hex(v) if to_int(v) != None else v)
                 except:
                     pass
-        if config.Option.get("verbose") == "on":
+        if config.Option.get("verbose"):
             msg(args)
         return args
 
@@ -1697,7 +1697,7 @@ class PEDA(object):
         if self.getpid():
             # try fast restore mem
             tmp = tmpfile()
-            tmp.write(bytes(buf, 'UTF-8'))
+            tmp.write(buf)
             tmp.flush()
             out = self.execute_redirect("restore %s binary 0x%x" % (tmp.name, address))
             tmp.close()
@@ -2023,7 +2023,7 @@ class PEDA(object):
         if value is None:
             return result
 
-        maps = self.get_vmmap()
+        maps   = self.get_vmmap()
         binmap = self.get_vmmap("binary")
 
         (arch, bits) = self.getarch()
@@ -3099,7 +3099,7 @@ class PEDACmd(object):
             try:
                 help(request)
             except Exception as e:
-                if config.Option.get("debug") == "on":
+                if config.Option.get("debug"):
                     msg('Exception (%s): %s' % ('pyhelp', e), "red")
                     traceback.print_exc()
                 msg("no Python documentation found for '%s'" % request)
@@ -3408,7 +3408,7 @@ class PEDACmd(object):
                 msg("Failed to restore GDB session")
 
         if option == "autosave":
-            if config.Option.get("autosave") == "on":
+            if config.Option.get("autosave"):
                 peda.save_session(filename)
 
         return
@@ -5874,7 +5874,7 @@ class pedaGDBCommand(gdb.Command):
                     reset_cache(sys.modules['__main__'])
                     func(*arg[1:])
                 except Exception as e:
-                    if config.Option.get("debug") == "on":
+                    if config.Option.get("debug"):
                         msg("Exception: %s" %e)
                         traceback.print_exc()
                     peda.restore_user_command("all")
