@@ -363,9 +363,11 @@ def hex2str(hexnum, intsize=4):
     """
     Convert a number in hex format to string
     """
+
     if not isinstance(hexnum, str):
         nbits = intsize * 8
         hexnum = "0x%x" % ((hexnum + (1 << nbits)) % (1 << nbits))
+
     s = hexnum[2:]
     if len(s) % 2 != 0:
         s = "0" + s
@@ -482,6 +484,15 @@ def format_reference_chain(chain):
                     text += "(%s)" % s
     return text
 
+def split_disasm_line(line):
+    m = re.search(".*(0x[^ ]+)\s*(?:<(.*)>)?[^:]*:\s*([^;]*(?:;(.*))?)", line)
+    if m is None:
+        return None, None, None, None
+    addr, name, inst, comment = m.groups()
+    addr = int(addr, 16)
+    return addr, name, inst, comment
+
+
 # vulnerable C functions, source: rats/flawfinder
 VULN_FUNCTIONS = [
     "exec", "system", "gets", "popen", "getenv", "strcpy", "strncpy", "strcat", "strncat",
@@ -525,41 +536,45 @@ def format_disasm_code(code, nearby=None):
             result += line + "\n"
         else:
             color = style = None
-            m = re.search(".*(0x[^ ]*).*:\s*([^ ]*)", line)
-            if not m: # failed to parse
-                result += line + "\n"
-                continue
-            addr, opcode = to_int(m.group(1)), m.group(2)
-            for c in colorcodes:
-                if c in opcode:
-                    color = colorcodes[c]
-                    if c == "call":
-                        for f in VULN_FUNCTIONS:
-                            if f in line.split(":", 1)[1]:
-                                style = "bold, underline"
-                                color = "red"
-                                break
-                    break
 
-            prefix = line.split(":")[0]
-            addr = re.search("(0x[^\s]*)", prefix)
-            if addr:
-                addr = to_int(addr.group(1))
-            else:
-                addr = -1
-            line = line.split(":", 1)[1]
+            addr, name, inst, comment = split_disasm_line(line)
+            if not addr:
+                result += line + "\n"
+                return
+
+            oaddr = re.search("\s*(0x[0-9a-fA-F]+)", line).group(1)
+
+            opcode = inst.split(None, 1)[0]
+            for c in colorcodes:
+                if c not in opcode:
+                    continue
+                color = colorcodes[c]
+                if c == "call":
+                    if any(f in inst for f in VULN_FUNCTIONS):
+                        style = "bold, underline"
+                        color = "red"
+                break
+
             if addr < target:
                 style = "dark"
             elif addr == target:
                 style = "bold"
                 color = "green"
 
-            code = colorize(line.split(";")[0], color, style)
-            if ";" in line:
-                comment = colorize(";" + line.split(";", 1)[1], color, "dark")
+            code = colorize(inst, color, style)
+
+            if name is not None:
+                name = colorize(" <%s>" % name, color, "dark")
+            else:
+                name = ""
+
+            if comment is not None:
+                comment = colorize(";" + comment, color, "dark")
             else:
                 comment = ""
-            line = "%s:%s%s" % (prefix, code, comment)
+
+
+            line = "%s%s:\t%s%s" % (oaddr, name, code, comment)
             result += line + "\n"
 
     return result.rstrip()
