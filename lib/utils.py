@@ -185,8 +185,9 @@ class message(object):
         if not teefd:
             teefd = config.Option.get("_teefd")
 
-        if (isinstance(text, str) or isinstance(text, unicode)) \
-           and "\x00" not in text:
+        text = text.replace("\x00", colorize(".", "red", None))
+
+        if (isinstance(text, str) or isinstance(text, unicode)):
             print(colorize(text, color, attrib), file=self.out)
             if teefd:
                 print(colorize(text, color, attrib), file=teefd)
