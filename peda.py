@@ -399,7 +399,6 @@ class PEDA(object):
                 break
         return status
 
-    @memoized
     def getpid(self):
         """
         Get PID of the debugged process
@@ -408,41 +407,19 @@ class PEDA(object):
             - pid (Int)
         """
 
-        out = None
-        status = self.get_status()
-        if not status or status == "STOPPED":
-            return None
+        return gdb.selected_inferior().pid
 
-        if self.is_target_remote(): # remote target
-            ctx = config.Option.get("context")
-            config.Option.set("context", None)
-            try:
-                out = self.execute_redirect("call getpid()")
-            except:
-                pass
+    def gettid(self):
+        """
+        Get TID of the debugged thread
 
-            config.Option.set("context", ctx)
+        Returns:
+            - tid (Int)
+        """
 
-            if out is None:
-                return None
-            else:
-                out = self.execute_redirect("print $")
-                if out:
-                    return to_int(out.split("=")[1])
-                else:
-                    return None
-
-        if self.getos() == "Linux":
-            out = self.execute_redirect('info proc')
-
-        if out is None: # non-Linux or cannot access /proc, fallback
-            out = self.execute_redirect('info program')
-        out = out.splitlines()[0]
-        if "process" in out or "Thread" in out:
-            pid = out.split()[-1].strip(".)")
-            return int(pid)
-        else:
-            return None
+        thread = gdb.selected_thread()
+        pid, lwpid, tid = thread.ptid
+        return lwpid or tid
 
     def getos(self):
         """
@@ -1426,9 +1403,9 @@ class PEDA(object):
 
             return binmap
 
-        def _get_allmaps_freebsd(pid, remote=False):
+        def _get_allmaps_freebsd(pid, tid, remote=False):
             maps = []
-            mpath = "/proc/%s/map" % pid
+            mpath = "/proc/%s/task/%s/maps" % (pid, tid)
             # 0x8048000 0x8049000 1 0 0xc36afdd0 r-x 1 0 0x1000 COW NC vnode /path/to/file NCH -1
             pattern = re.compile("0x([0-9a-f]*) 0x([0-9a-f]*)(?: [^ ]*){3} ([rwx-]*)(?: [^ ]*){6} ([^ ]*)")
 
@@ -1452,9 +1429,11 @@ class PEDA(object):
                     maps += [(start, end, perm, mapname)]
             return maps
 
-        def _get_allmaps_linux(pid, remote=False):
+        # wapi
+        def _get_allmaps_linux(pid, tid, remote=False):
+
             maps = []
-            mpath = "/proc/%s/maps" % pid
+            mpath = "/proc/%s/task/%s/maps" % (pid, tid)
             #00400000-0040b000 r-xp 00000000 08:02 538840  /path/to/file
             pattern = re.compile("([0-9a-f]*)-([0-9a-f]*) ([rwxps-]*)(?: [^ ]*){3} *(.*)")
 
@@ -1479,16 +1458,18 @@ class PEDA(object):
 
         result = []
         pid = self.getpid()
-        if not pid: # not running, try to use elfheader()
+        tid = self.gettid()
+        if not pid or not tid: # not running, try to use elfheader()
             return _get_offline_maps()
+
 
         # retrieve all maps
         os = self.getos()
         rmt = self.is_target_remote()
         if os == "FreeBSD": # FreeBSD
-            maps = _get_allmaps_freebsd(pid, rmt)
+            maps = _get_allmaps_freebsd(pid, tid, rmt)
         elif os == "Linux" : # Linux
-            maps = _get_allmaps_linux(pid, rmt)
+            maps = _get_allmaps_linux(pid, tid, rmt)
         else:
             maps = []
 
@@ -1566,7 +1547,7 @@ class PEDA(object):
         else:
             return False
 
-    @memoized
+    # @memoized
     def is_address(self, value, maps=None):
         """
         Check if a value is a valid address (belongs to a memory region)
@@ -1578,6 +1559,7 @@ class PEDA(object):
         Returns:
             - True if value belongs to an address range (Bool)
         """
+
         vmrange = self.get_vmrange(value, maps)
         return vmrange is not None
 
