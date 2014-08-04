@@ -486,7 +486,7 @@ def format_reference_chain(chain):
     return text
 
 def split_disasm_line(line):
-    m = re.search(".*(0x[^ ]+)\s*(?:<(.*)>)?[^:]*:\s*([^;]*(?:;(.*))?)", line)
+    m = re.search("\s*(0x[^ ]+)\s*(?:<(.*)>)?[^:]*:\s*([^;]*(?:;(.*))?)", line)
     if m is None:
         return None, None, None, None
     addr, name, inst, comment = m.groups()
