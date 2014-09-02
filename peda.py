@@ -407,7 +407,10 @@ class PEDA(object):
             - pid (Int)
         """
 
-        return gdb.selected_inferior().pid
+        try:
+            return gdb.selected_inferior().pid
+        except:
+            return None
 
     def gettid(self):
         """
@@ -416,10 +419,12 @@ class PEDA(object):
         Returns:
             - tid (Int)
         """
-
-        thread = gdb.selected_thread()
-        pid, lwpid, tid = thread.ptid
-        return lwpid or tid
+        try:
+            thread = gdb.selected_thread()
+            pid, lwpid, tid = thread.ptid
+            return lwpid or tid
+        except:
+            return None
 
     def getos(self):
         """
@@ -1198,12 +1203,12 @@ class PEDA(object):
 
         target = None
         inst = inst.strip()
-        opcode = inst.split(":")[1].split()[0]
+        opcode = inst.split(None, 1)[0]
         # this regex includes x86_64 RIP relateive address reference
-        p = re.compile(".*?:\s*[^ ]*\s*(.* PTR ).*(0x[^ ]*)")
+        p = re.compile("\s*[^ ]*\s*(.* PTR ).*(0x[^ ]*)")
         m = p.search(inst)
         if not m:
-            p = re.compile(".*?:\s.*(0x[^ ]*)")
+            p = re.compile("\s.*(0x[^ ]*)")
             m = p.search(inst)
             if m:
                 target = m.group(1)
@@ -1211,13 +1216,13 @@ class PEDA(object):
                 target = None
         else:
             if "]" in m.group(2): # e.g DWORD PTR [ebx+0xc]
-                p = re.compile(".*?:\s*[^ ]*\s*(.* PTR ).*\[(.*)\]")
+                p = re.compile("\s*[^ ]*\s*(.* PTR ).*\[(.*)\]")
                 m = p.search(inst)
             target = self.parse_and_eval("%s[%s]" % (m.group(1), m.group(2).strip()))
 
         return to_int(target)
 
-    def testjump(self, inst=None):
+    def testjump(self, line=None):
         """
         Test if jump instruction is taken or not
 
@@ -1229,13 +1234,15 @@ class PEDA(object):
         if not flags:
             return None
 
-        if not inst:
+        if not line:
             pc = self.getreg("pc")
-            inst = self.execute_redirect("x/i 0x%x" % pc)
-            if not inst:
+            line = self.execute_redirect("x/i 0x%x" % pc)
+            if not line:
                 return None
 
-        opcode = inst.split(":")[1].split()[0]
+        addr, name, inst, comment = split_disasm_line(line)
+        opcode = inst.split(None, 1)[0]
+
         next_addr = self.eval_target(inst)
         if next_addr is None:
             next_addr = 0
@@ -3210,7 +3217,7 @@ class PEDACmd(object):
         elif opt.startswith("env"):
             _set_env(name, value)
         else:
-            msg("Unknown set option: %s" % known_args.opt)
+            msg("Unknown set option: %s" % opt)
         return
     set.options = ["option", "arg", "env"]
 
@@ -4192,57 +4199,66 @@ class PEDACmd(object):
 
         pc = peda.getreg("pc")
         if peda.is_address(pc):
-            inst = peda.get_disasm(pc)
+            line = peda.get_disasm(pc)
         else:
-            inst = None
+            line = None
 
-        msg(separator('code'), 'blue')
-        if inst: # valid $PC
-            text = ""
-            opcode = inst.split(":")[1].split()[0]
-            # stopped at function call
-            if "call" in opcode:
-                text += peda.disassemble_around(pc, count)
-                msg(format_disasm_code(text, pc))
-                self.dumpargs()
-            # stopped at jump
-            elif "j" in opcode:
-                jumpto = peda.testjump(inst)
-                if jumpto: # JUMP is taken
-                    code = peda.disassemble_around(pc, count)
-                    code = code.splitlines()
-                    pc_idx = 999
-                    for (idx, line) in enumerate(code):
-                        if ("0x%x" % pc) in line.split(":")[0]:
-                            pc_idx = idx
-                        if idx <= pc_idx:
-                            text += line + "\n"
-                        else:
-                            text += " | %s\n" % line.strip()
-                    text = format_disasm_code(text, pc) + "\n"
-                    text += " |->"
-                    code = peda.get_disasm(jumpto, count/2)
-                    if not code:
-                        code = "   Cannot evaluate jump destination\n"
+        msg(separator('code'), "blue")
 
-                    code = code.splitlines()
-                    text += red(code[0]) + "\n"
-                    for line in code[1:]:
-                        text += "       %s\n" % line.strip()
-                    text += red("JUMP is taken".rjust(79))
-                else: # JUMP is NOT taken
-                    text += format_disasm_code(peda.disassemble_around(pc, count), pc)
-                    text += "\n" + green("JUMP is NOT taken".rjust(79))
-
-                msg(text.rstrip())
-            # stopped at other instructions
-            else:
-                text += peda.disassemble_around(pc, count)
-                msg(format_disasm_code(text, pc))
-        else: # invalid $PC
+        if not line:
             msg("Invalid $PC address: 0x%x" % pc, "red")
+            return
 
-        return
+
+        text = ""
+
+        addr, name, inst, comment = split_disasm_line(line)
+        opcode = inst.split(None, 1)[0]
+
+        # stopped at function call
+        if "call" in opcode:
+            text += peda.disassemble_around(pc, count)
+            msg(format_disasm_code(text, pc))
+            self.dumpargs()
+        # stopped at jump
+        elif "j" in opcode:
+            jumpto = peda.testjump(line)
+            if jumpto: # JUMP is taken
+                code = peda.disassemble_around(pc, count)
+                code = code.splitlines()
+                pc_idx = 999
+                for (idx, jline) in enumerate(code):
+
+                    jaddr, _, _, _ = split_disasm_line(jline)
+
+                    if jaddr == pc:
+                        pc_idx = idx
+                    if idx <= pc_idx:
+                        text += jline + "\n"
+                    else:
+                        text += " | %s\n" % jline.strip()
+
+                text = format_disasm_code(text, pc) + "\n"
+                text += " |->"
+                code = peda.get_disasm(jumpto, count/2)
+                if not code:
+                    code = "   Cannot evaluate jump destination\n"
+
+                code = code.splitlines()
+                text += red(code[0]) + "\n"
+                for line in code[1:]:
+                    text += "       %s\n" % line.strip()
+                text += red("JUMP is taken".rjust(79))
+            else: # JUMP is NOT taken
+                text += format_disasm_code(peda.disassemble_around(pc, count), pc)
+                text += "\n" + green("JUMP is NOT taken".rjust(79))
+
+            msg(text.rstrip())
+            # stopped at other instructions
+        else:
+            text += peda.disassemble_around(pc, count)
+            msg(format_disasm_code(text, pc))
+
 
     def context_stack(self, *arg):
         """
@@ -4666,7 +4682,7 @@ class PEDACmd(object):
                 regsList[chain[0][0]] = regslist
 
         for chain in result:
-            text += "%04d| %s" % (idx, regsList[chain[0][0]] + " "*(regsColumnLen-len(regsList[chain[0][0]])) if chain[0][0] in regsList else " "*regsColumnLen)
+            text += "%02d:%04d| %s" % (idx/step, idx, regsList[chain[0][0]] + " "*(regsColumnLen-len(regsList[chain[0][0]])) if chain[0][0] in regsList else " "*regsColumnLen)
             text += format_reference_chain(chain)
             text += "\n"
             idx += step
