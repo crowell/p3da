@@ -240,7 +240,10 @@ def trim(docstring):
 
 def separator(title = ''):
     import struct, termios, fcntl, sys
-    _height, width = struct.unpack('hh', fcntl.ioctl(sys.stdin.fileno(), termios.TIOCGWINSZ, '1234'))
+    try:
+        _height, width = struct.unpack('hh', fcntl.ioctl(sys.stdin.fileno(), termios.TIOCGWINSZ, '1234'))
+    except:
+        width = 80
     w = width - 2 - len(title)
     return '[%s%s%s]' % ('-' * (w // 2), title, '-' * ((w + 1) // 2))
 
@@ -291,11 +294,13 @@ def is_printable(text, printables=""):
     """
     Check if a string is printable
     """
-    try:
-        text.decode('ascii')
+    try:    text = text.decode('ascii')
+    except: return False
+
+    if all(c in string.printable for c in text):
         return True
-    except:
-        return False
+
+    return False
 
 def is_math_exp(str):
     """
@@ -491,12 +496,14 @@ def format_reference_chain(chain):
     return text
 
 def split_disasm_line(line):
+    prefix = line[:3]
     m = re.search("\s*(0x[^ ]+)\s*(?:<(.*)>)?[^:]*:\s*([^;]*(?:;(.*))?)", line)
     if m is None:
         return None, None, None, None
     addr, name, inst, comment = m.groups()
     addr = int(addr, 16)
-    return addr, name, inst, comment
+
+    return prefix, addr, name, inst, comment
 
 
 # vulnerable C functions, source: rats/flawfinder
@@ -543,7 +550,7 @@ def format_disasm_code(code, nearby=None):
         else:
             color = style = None
 
-            addr, name, inst, comment = split_disasm_line(line)
+            prefix, addr, name, inst, comment = split_disasm_line(line)
             if not addr:
                 result += line + "\n"
                 return
@@ -580,7 +587,7 @@ def format_disasm_code(code, nearby=None):
                 comment = ""
 
 
-            line = "%s%s:\t%s%s" % (oaddr, name, code, comment)
+            line = "%s%s%s:\t%s%s" % (prefix, oaddr, name, code, comment)
             result += line + "\n"
 
     return result.rstrip()

@@ -1240,7 +1240,7 @@ class PEDA(object):
             if not line:
                 return None
 
-        addr, name, inst, comment = split_disasm_line(line)
+        prefix, addr, name, inst, comment = split_disasm_line(line)
         opcode = inst.split(None, 1)[0]
 
         next_addr = self.eval_target(inst)
@@ -4212,7 +4212,7 @@ class PEDACmd(object):
 
         text = ""
 
-        addr, name, inst, comment = split_disasm_line(line)
+        prefix, addr, name, inst, comment = split_disasm_line(line)
         opcode = inst.split(None, 1)[0]
 
         # stopped at function call
@@ -4229,7 +4229,7 @@ class PEDACmd(object):
                 pc_idx = 999
                 for (idx, jline) in enumerate(code):
 
-                    jaddr, _, _, _ = split_disasm_line(jline)
+                    prefix, jaddr, _, _, _ = split_disasm_line(jline)
 
                     if jaddr == pc:
                         pc_idx = idx
