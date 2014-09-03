@@ -3264,41 +3264,36 @@ class PEDACmd(object):
             MYNAME address count
             MYNAME address /count (dump "count" lines, 16-bytes each)
         """
-        def ascii_char(ch):
-            if (ch) >= 0x20 and (ch) < 0x7e:
-                return chr(ch)
-            else:
-                return "."
-
         (address, count) = normalize_argv(arg, 2)
+        linelen = 16 # display 16-bytes per line
+
         if address is None:
             self._missing_argument()
 
-        if count and count.startswith("/"):
-            count = to_int(count[1:])
-            count = count * 16 if count else None
+        count = count or linelen
+        if isinstance(count,str):
+            count = count.strip('/')
+            count = linelen * to_int(count)
 
-        if count is None:
-            count = 16
         bytes = peda.dumpmem(address, address+count)
         if bytes is None:
             warning_msg("cannot retrieve memory content")
-        else:
-            linelen = 16 # display 16-bytes per line
-            i = 0
-            text = ""
-            while bytes:
-                buf = bytes[:linelen]
-                if isinstance(buf, str):
-                    buf = map(ord, buf)
-                hexbytes = " ".join(["%02x" % c for c in buf])
-                asciibytes = "".join([ascii_char(c) for c in buf])
-                text += '%s : %s  %s\n' % (blue(to_address(address+i*linelen)), hexbytes.ljust(linelen*3), asciibytes)
-                bytes = bytes[linelen:]
-                i += 1
-            pager(text)
+            return
 
-        return
+        lines = []
+        if isinstance(bytes, str):
+            bytes = map(ord, bytes)
+
+        ascii_char = lambda x: x if (x in string.printable) else '.'
+
+        for offset in range(0, count, linelen):
+            buf        = bytes[offset:offset+linelen]
+            hexbytes   = " ".join(["%02x" % c for c in buf]).ljust(linelen*3)
+            asciibytes = "".join([ascii_char(chr(c)) for c in buf])
+            blueaddr   = blue(to_address(address+offset))
+            lines.append('0x%04x %s │ %s │ %s' % (offset, blueaddr, hexbytes, asciibytes))
+
+        pager('\n'.join(lines))
 
     def aslr(self, *arg):
         """

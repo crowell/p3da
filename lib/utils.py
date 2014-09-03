@@ -7,6 +7,7 @@
 #       License: see LICENSE file for details
 #
 from __future__ import print_function
+import gdb
 import tempfile
 import pprint
 import inspect
@@ -316,16 +317,12 @@ def normalize_argv(args, size=0):
     Normalize argv to list with predefined length
     """
     args = list(args)
-    for (idx, val) in enumerate(args):
-        if to_int(val) is not None:
-            args[idx] = to_int(val)
-        if size and idx == size:
-            return args[:idx]
+    for (idx, val) in enumerate(args[:size]):
+        as_int = to_int(val)
+        if as_int is not None:
+            args[idx] = as_int
 
-    if size == 0:
-        return args
-    for i in range(len(args), size):
-        args += [None]
+    args += [None]*(size-len(args))
     return args
 
 def to_hexstr(str):
@@ -358,10 +355,13 @@ def to_int(val):
     """
     Convert a string to int number
     """
-    try:
-        return int(str(val), 0)
-    except:
-        return None
+    try:    return int(str(val), 0)
+    except: pass
+
+    try:    int(gdb.parse_and_eval(val))
+    except: pass
+
+    return None
 
 def str2hex(str):
     """
