@@ -3284,12 +3284,12 @@ class PEDACmd(object):
         if isinstance(bytes, str):
             bytes = map(ord, bytes)
 
-        ascii_char = lambda x: x if (x in string.printable) else '.'
+        ascii_char = lambda ch: chr(ch) if (ch) >= 0x20 and (ch) < 0x7e else '.'
 
         for offset in range(0, count, linelen):
             buf        = bytes[offset:offset+linelen]
-            hexbytes   = " ".join(["%02x" % c for c in buf]).ljust(linelen*3)
-            asciibytes = "".join([ascii_char(chr(c)) for c in buf])
+            hexbytes   = " ".join("%02x" % c for c in buf).ljust(linelen*3)
+            asciibytes = "".join(ascii_char(c) for c in buf)
             blueaddr   = blue(to_address(address+offset))
             lines.append('0x%04x %s │ %s │ %s' % (offset, blueaddr, hexbytes, asciibytes))
 
