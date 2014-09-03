@@ -3270,7 +3270,7 @@ class PEDACmd(object):
         if address is None:
             self._missing_argument()
 
-        count = count or linelen
+        count = lineline if count is None else count
         if isinstance(count,str):
             count = count.strip('/')
             count = linelen * to_int(count)
@@ -3292,6 +3292,9 @@ class PEDACmd(object):
             asciibytes = "".join(ascii_char(c) for c in buf)
             blueaddr   = blue(to_address(address+offset))
             lines.append('0x%04x %s │ %s │ %s' % (offset, blueaddr, hexbytes, asciibytes))
+
+        blueaddr   = blue(to_address(address+count))
+        lines.append('0x%04x %s' % (count, blueaddr))
 
         pager('\n'.join(lines))
 
