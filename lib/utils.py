@@ -496,15 +496,20 @@ def format_reference_chain(chain):
     return text
 
 def split_disasm_line(line):
-    prefix = line[:3]
-    m = re.search("\s*(0x[^ ]+)\s*(?:<(.*)>)?[^:]*:\s*([^;]*(?:;(.*))?)", line)
-    if m is None:
-        return None, None, None, None
-    addr, name, inst, comment = m.groups()
-    addr = int(addr, 16)
+    # example lines
+    # '   0x41ea8a <main+10>:  sub    $0x128,%rsp'
+    # '=> 0x8048560:\tmov    eax,ds:0x80499e0 ; hello world
+    rprefix   = r'(.*?)'
+    raddr     = r'(0x[0-9a-fA-F]+)'
+    rname     = r'\s*(?:<(.*?)>)?'
+    rinstr    = r':?\s*([^;]+)'
+    rcomment  = r'(.*)'
+    pattern = rprefix + raddr + rname + rinstr + rcomment
 
-    return prefix, addr, name, inst, comment
+    # PANIC!
+    p,a,n,i,c = re.match(pattern, line).groups()
 
+    return p,int(a,16),n,i,(c or None)
 
 # vulnerable C functions, source: rats/flawfinder
 VULN_FUNCTIONS = [
