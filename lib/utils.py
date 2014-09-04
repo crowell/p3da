@@ -358,7 +358,7 @@ def to_int(val):
     try:    return int(str(val), 0)
     except: pass
 
-    try:    int(gdb.parse_and_eval(val))
+    try:    return int(gdb.parse_and_eval(val))
     except: pass
 
     return None
