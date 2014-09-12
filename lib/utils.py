@@ -517,7 +517,7 @@ VULN_FUNCTIONS = [
     "memcpy", "bcopy", "printf", "sprintf", "snprintf", "scanf",  "getchar", "getc", "read",
     "recv", "tmp", "temp"
 ]
-@memoized
+
 def format_disasm_code(code, nearby=None):
     """
     Format output of disassemble command with colors to highlight:

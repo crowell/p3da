@@ -1,8 +1,11 @@
-#
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 #       PEDA - Python Exploit Development Assistance for GDB (python3 version)
 #
 #       Copyright (C) 2012 Long Le Dinh <longld at vnsecurity.net>
 #       Copyright (C) 2014 Jeffrey Crowell <crowell at bu.edu>
+#       Copyright (C) 2014 Zach Riggle <zachriggle at gmail>
 #
 #       License: see LICENSE file for details
 #
@@ -3001,10 +3004,8 @@ class PEDACmd(object):
         """
         Get the help text, for internal use by help command and other aliases
         """
-
-        (cmd,) = normalize_argv(arg, 1)
         helptext = ""
-        if cmd is None:
+        if len(arg) == 0:
             helptext = red("PEDA", "bold") + blue(" - Python Exploit Development Assistance for GDB", "bold") + "\n"
             helptext += "For latest update, check peda project page: %s\n" % green("http://code.google.com/p/peda/")
             helptext += "List of \"peda\" subcommands, type the subcommand to invoke it:\n"
@@ -3015,6 +3016,7 @@ class PEDACmd(object):
                 helptext += "%s -- %s\n" % (cmd, green(trim(func.__doc__.strip("\n").splitlines()[0])))
             helptext += "\nType \"help\" followed by subcommand for full documentation."
         else:
+            cmd = arg[0]
             if cmd in self.commands:
                 func = getattr(self, cmd)
                 lines = trim(func.__doc__).splitlines()
