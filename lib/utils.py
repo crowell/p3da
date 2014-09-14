@@ -312,15 +312,16 @@ def is_math_exp(str):
     exp = set(str.lower())
     return (exp & opers != set()) and (exp - charset == set())
 
-def normalize_argv(args, size=0):
+def normalize_argv(args, size=0, convert=True):
     """
     Normalize argv to list with predefined length
     """
     args = list(args)
     for (idx, val) in enumerate(args[:size]):
-        as_int = to_int(val)
-        if as_int is not None:
-            args[idx] = as_int
+        if convert:
+            as_int = to_int(val)
+            if as_int is not None:
+                args[idx] = as_int
 
     args += [None]*(size-len(args))
     return args

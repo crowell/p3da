@@ -1052,7 +1052,6 @@ class PEDA(object):
                 + depth: current backtrace depth (Int)
                 + instruction: current instruction (String)
         """
-
         if not self.getpid():
             return None
 
@@ -1106,6 +1105,7 @@ class PEDA(object):
             #p = re.compile(".*?:\s*([^ ]*)")
             p = re.compile(".*?:\s*(.*)")
             code = p.match(current_instruction).group(1)
+
             found = 0
             for i in inst.replace(",", " ").split():
                 if re.match(i.strip(), code.strip()):
@@ -3875,9 +3875,10 @@ class PEDACmd(object):
             MYNAME "inst1,inst2" (step to next inst in binary)
             MYNAME "inst1,inst2" mapname1,mapname2
         """
-        (insts, mapname) = normalize_argv(arg, 2)
+        (insts, mapname) = normalize_argv(arg, 2, False)
         if insts is None:
             self._missing_argument()
+
 
         if not self._is_running():
             return
