@@ -1,3 +1,5 @@
+# THIS IS ONLY HERE FOR HISTORICAL REASONS - PLEASE USE [longld/peda](https://github.com/longld/peda) INSTEAD, AS IT SUPPORTS PYTHON3 NOW.
+
 peda
 ====
 
